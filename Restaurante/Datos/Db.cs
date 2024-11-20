@@ -97,5 +97,38 @@ namespace Restaurante.Datos
             finally { cmd.Connection.Close(); }
             return 0;
         }
+        //Orden
+        public bool CrearOrden(Orden orden)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = @"
+            INSERT INTO ordenes (Fecha, ObservacionCliente, MetodoPagoId, OrdenEstadoId, UsuarioId)
+            VALUES (@Fecha, @ObservacionCliente, @MetodoPagoId, @OrdenEstadoId, @UsuarioId)";
+
+                cmd.Parameters.AddWithValue("@Fecha", orden.Fecha);
+                cmd.Parameters.AddWithValue("@ObservacionCliente", orden.ObservacionCliente);
+                cmd.Parameters.AddWithValue("@MetodoPagoId", orden.MetodoPagoId);
+                cmd.Parameters.AddWithValue("@OrdenEstadoId", orden.OrdenEstadoId);
+                cmd.Parameters.AddWithValue("@UsuarioId", orden.UsuarioId);
+
+                cmd.Connection.Open();
+                int rowsAffected = cmd.ExecuteNonQuery();
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                // Manejo de errores
+                throw ex;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+
     }
 }
