@@ -22,7 +22,7 @@ namespace Restaurante.Controllers
         }
 
         //Orden y detalle 
-        [HttpGet("{id}")]
+        [HttpGet("/detalle{id}")]
         public Orden GetOrderYDetailsById(int id)
         {
             return new Db().ObtenerOrdenYDetallePorId(id);

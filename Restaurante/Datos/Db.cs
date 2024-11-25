@@ -1702,7 +1702,7 @@ namespace Restaurante.Datos
         {
 
             Orden orden = new Orden();
-            OrdenDetalle ordenDetalles = new OrdenDetalle();
+            List<OrdenDetalle> ordenDetalles = new List<OrdenDetalle>();
             try
             {
                 cmd.Parameters.Clear();
@@ -1732,14 +1732,14 @@ namespace Restaurante.Datos
 
                 // Obtener Detalles
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.CommandText = "ObtenerOrdenDetalle";
+                cmd.CommandText = "LeerOrdenDetalle";
                 cmd.Parameters.Add(new MySqlParameter("p_OrdenId", id));
 
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        ordenDetalles = new OrdenDetalle
+                        ordenDetalles.Add (new OrdenDetalle
                         {
                             Id = (int)reader["Id"],
                             ProductoId = (int)reader["ProductoId"],
@@ -1747,7 +1747,7 @@ namespace Restaurante.Datos
                             Precio = (decimal)reader["Precio"],
                             Descuento = (decimal)reader["Descuento"],
                             OrdenId = (int)reader["OrdenId"]
-                        };
+                        });
                     }
                 }
             }
