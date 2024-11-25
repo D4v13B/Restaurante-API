@@ -10,18 +10,16 @@ namespace Restaurante.Datos
         MySqlCommand cmd;
         MySqlDataAdapter adapter;
         DataSet ds;
+        private readonly string? cadenaConexion;
         public Db()
         {
-            //string cadenaConexion = "Server=193.203.166.22;Database=u949375132_restaurante;User Id=u949375132_gs121;Password=ElielAngelica121;";
-            string cadenaConexion = "Server=localhost;Database=apprestaurante;User Id=root;Password=;";
+            cadenaConexion = AppSettings.Configuration["ConnectionStrings:DefaultConnection"];
 
             con = new MySqlConnection();
             con.ConnectionString = cadenaConexion;
             cmd = new MySqlCommand();
             cmd.Connection = con;
         }
-
-
         public List<Usuario> ObtenerUsuarios()
         {
             List<Usuario> usuarios = new List<Usuario>();
@@ -340,6 +338,39 @@ namespace Restaurante.Datos
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
                 cmd.CommandText = "SELECT * FROM ingredientes";
+
+                cmd.Connection.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        ingredientes.Add(new Ingrediente
+                        {
+                            Id = reader.GetInt32("id"),
+                            Nombre = reader.GetString("nombre"),
+                            Stock = reader.GetInt32("stock"),
+                            UnidadMedida = reader.GetString("unidad_medida")
+                        });
+                    }
+                }
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+
+            return ingredientes;
+        }
+
+        public List<Ingrediente> ObtenerIngredientesXPlatillo()
+        {
+            var ingredientes = new List<Ingrediente>();
+
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "SELECT * FROM ingredientes INNER JOIN platillosIngredientes";
 
                 cmd.Connection.Open();
                 using (var reader = cmd.ExecuteReader())
@@ -894,7 +925,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "INSERT INTO promocion_detalle(producto_id, promocion_id) VALUES(@productoId, @promocionId)";
+                cmd.CommandText = "INSERT INTO promociones_detalles(producto_id, promocion_id) VALUES(@productoId, @promocionId)";
                 cmd.Parameters.Add(new MySqlParameter("@productoId", promocionDetalleRequest.ProductoId));
                 cmd.Parameters.Add(new MySqlParameter("@promocionId", promocionDetalleRequest.PromocionId));
 
@@ -917,7 +948,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "DELETE FROM promocion_detalle WHERE id = @id";
+                cmd.CommandText = "DELETE FROM promociones_detalles WHERE id = @id";
                 cmd.Parameters.Add(new MySqlParameter("@id", id));
 
                 cmd.Connection.Open();
@@ -941,7 +972,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "SELECT id, producto_id, promocion_id FROM promocion_detalle";
+                cmd.CommandText = "SELECT id, producto_id, promocion_id FROM promociones_detalles";
 
                 cmd.Connection.Open();
                 var reader = cmd.ExecuteReader();
@@ -976,7 +1007,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "SELECT id, producto_id, promocion_id FROM promocion_detalle WHERE id = @id";
+                cmd.CommandText = "SELECT id, producto_id, promocion_id FROM promociones_detalles WHERE id = @id";
                 cmd.Parameters.Add(new MySqlParameter("@id", id));
 
                 cmd.Connection.Open();
@@ -1010,7 +1041,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "INSERT INTO platillo_ingrediente(platillo_id, ingrediente_id, cantidad_uso) VALUES(@platilloId, @ingredienteId, @cantidadUso)";
+                cmd.CommandText = "INSERT INTO platillo_ingredientes(platillo_id, ingredienteId, cantidad_uso) VALUES(@platilloId, @ingredienteId, @cantidadUso)";
                 cmd.Parameters.Add(new MySqlParameter("@platilloId", platilloIngredienteRequest.PlatilloId));
                 cmd.Parameters.Add(new MySqlParameter("@ingredienteId", platilloIngredienteRequest.IngredienteId));
                 cmd.Parameters.Add(new MySqlParameter("@cantidadUso", platilloIngredienteRequest.CantidadUso));
@@ -1034,7 +1065,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "DELETE FROM platillo_ingrediente WHERE platillo_id = @id";
+                cmd.CommandText = "DELETE FROM platillo_ingredientes WHERE platillo_id = @id";
                 cmd.Parameters.Add(new MySqlParameter("@id", id));
 
                 cmd.Connection.Open();
@@ -1058,7 +1089,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "SELECT platillo_id, ingrediente_id, cantidad_uso FROM platillo_ingrediente";
+                cmd.CommandText = "SELECT platillo_id, ingredienteId, cantidad_uso FROM platillo_ingredientes";
 
                 cmd.Connection.Open();
                 var reader = cmd.ExecuteReader();
@@ -1068,7 +1099,7 @@ namespace Restaurante.Datos
                     platilloIngredientes.Add(new PlatilloIngrediente
                     {
                         PlatilloId = reader.GetInt32("platillo_id"),
-                        IngredienteId = reader.GetInt32("ingrediente_id"),
+                        IngredienteId = reader.GetInt32("ingredienteId"),
                         CantidadUso = reader.GetDecimal("cantidad_uso")
                     });
                 }
@@ -1093,7 +1124,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "SELECT platillo_id, ingrediente_id, cantidad_uso FROM platillo_ingrediente WHERE platillo_id = @id";
+                cmd.CommandText = "SELECT platillo_id, ingredienteId, cantidad_uso FROM platillo_ingredientes WHERE platillo_id = @id";
                 cmd.Parameters.Add(new MySqlParameter("@id", id));
 
                 cmd.Connection.Open();
@@ -1104,7 +1135,7 @@ namespace Restaurante.Datos
                     platilloIngrediente = new PlatilloIngrediente
                     {
                         PlatilloId = reader.GetInt32("platillo_id"),
-                        IngredienteId = reader.GetInt32("ingrediente_id"),
+                        IngredienteId = reader.GetInt32("ingredienteId"),
                         CantidadUso = reader.GetDecimal("cantidad_uso")
                     };
                 }

@@ -12,6 +12,9 @@
 
         // Relación con ProductoTipo
         public ProductoTipo ProductoTipo { get; set; }
+
+        //Relacion con ingredientes 1:N
+        public List<Ingrediente> platillosIngredientes { get; set; }
     }
 
 }

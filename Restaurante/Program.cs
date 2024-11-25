@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Restaurante;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Asignar la configuración global
+AppSettings.Configuration = builder.Configuration;
 
 // Add services to the container.
 
