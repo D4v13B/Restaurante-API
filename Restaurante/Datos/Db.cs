@@ -1,4 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
+using MySqlX.XDevAPI.CRUD;
+using Restaurante.Controllers;
 using Restaurante.Models;
 using System.Data;
 
@@ -12,8 +14,8 @@ namespace Restaurante.Datos
         DataSet ds;
         public Db()
         {
-            //string cadenaConexion = "Server=193.203.166.22;Database=u949375132_restaurante;User Id=u949375132_gs121;Password=ElielAngelica121;";
-            string cadenaConexion = "Server=localhost;Database=apprestaurante;User Id=root;Password=;";
+            string cadenaConexion = "Server=193.203.166.22;Database=u949375132_restaurante;User Id=u949375132_gs121;Password=ElielAngelica121;";
+            //string cadenaConexion = "Server=localhost;Database=apprestaurante;User Id=root;Password=;";
 
             con = new MySqlConnection();
             con.ConnectionString = cadenaConexion;
@@ -99,10 +101,6 @@ namespace Restaurante.Datos
             finally { cmd.Connection.Close(); }
             return 0;
         }
-<<<<<<< HEAD
-        //Orden
-        public bool CrearOrden(Orden orden)
-=======
 
         // Obtener todos los productos
         public List<Producto> ObtenerProductos()
@@ -206,32 +204,11 @@ namespace Restaurante.Datos
 
         // Guardar producto
         public int SaveProduct(ProductoRequest productoRequest)
->>>>>>> 335aaf3d16fff212fb69f03bf165c50c628f0bf7
         {
             try
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-<<<<<<< HEAD
-                cmd.CommandText = @"
-            INSERT INTO ordenes (Fecha, ObservacionCliente, MetodoPagoId, OrdenEstadoId, UsuarioId)
-            VALUES (@Fecha, @ObservacionCliente, @MetodoPagoId, @OrdenEstadoId, @UsuarioId)";
-
-                cmd.Parameters.AddWithValue("@Fecha", orden.Fecha);
-                cmd.Parameters.AddWithValue("@ObservacionCliente", orden.ObservacionCliente);
-                cmd.Parameters.AddWithValue("@MetodoPagoId", orden.MetodoPagoId);
-                cmd.Parameters.AddWithValue("@OrdenEstadoId", orden.OrdenEstadoId);
-                cmd.Parameters.AddWithValue("@UsuarioId", orden.UsuarioId);
-
-                cmd.Connection.Open();
-                int rowsAffected = cmd.ExecuteNonQuery();
-                return rowsAffected > 0;
-            }
-            catch (Exception ex)
-            {
-                // Manejo de errores
-                throw ex;
-=======
                 cmd.CommandText = "INSERT INTO productos(nombre, precio, descripcion, unidad_medida, productoTipoId, foto) VALUES(@n, @p, @d, @u, @pt, @f)";
                 cmd.Parameters.Add(new MySqlParameter("@n", productoRequest.Nombre));
                 cmd.Parameters.Add(new MySqlParameter("@p", productoRequest.Precio));
@@ -246,7 +223,6 @@ namespace Restaurante.Datos
             catch (Exception ex)
             {
                 throw;
->>>>>>> 335aaf3d16fff212fb69f03bf165c50c628f0bf7
             }
             finally
             {
@@ -254,8 +230,6 @@ namespace Restaurante.Datos
             }
         }
 
-<<<<<<< HEAD
-=======
         // Actualizar producto
         public int UpdateProduct(int id, ProductoRequest productoRequest)
         {
@@ -317,7 +291,7 @@ namespace Restaurante.Datos
                 cmd.CommandText = "SELECT * FROM usuarios a INNER JOIN usuarios_tipos b ON a.usuarioTipoId = b.id  WHERE email =  @p_email AND password = SHA2(@p_password, 256) LIMIT 1 ";
 
                 cmd.Parameters.AddWithValue("@p_email", email);
-                cmd.Parameters.AddWithValue ("@p_password", password);
+                cmd.Parameters.AddWithValue("@p_password", password);
                 cmd.Connection.Open();
                 ds = new DataSet();
 
@@ -1399,7 +1373,360 @@ namespace Restaurante.Datos
                 cmd.Connection.Close();
             }
         }
->>>>>>> 335aaf3d16fff212fb69f03bf165c50c628f0bf7
+
+        //CRUD ORDEN
+        public int CrearOrden(OrdenRequest ordenRequest)
+        {
+            try
+            {
+
+                    cmd.Parameters.Clear();
+
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandText = "CrearOrden";
+                    cmd.Parameters.Add(new MySqlParameter("p_Fecha", ordenRequest.Fecha));
+                    cmd.Parameters.Add(new MySqlParameter("p_ObservacionCliente", ordenRequest.ObservacionCliente));
+                    cmd.Parameters.Add(new MySqlParameter("p_MetodoPagoId", ordenRequest.MetodoPagoId));
+                    cmd.Parameters.Add(new MySqlParameter("p_OrdenEstadoId", ordenRequest.OrdenEstadoId));
+                    cmd.Parameters.Add(new MySqlParameter("p_UsuarioId", ordenRequest.UsuarioId));
+
+                    cmd.Connection.Open();
+                    return cmd.ExecuteNonQuery();
+                
+            }catch (Exception ex) 
+            { 
+                throw; 
+            }
+            finally {
+                cmd.Connection.Close(); 
+            }
+        }
+
+        
+        public List<Orden> ObtenerOrdenes()
+
+        {
+            List<Orden> orden = new List<Orden>();
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "LeerOrden";
+
+                cmd.Connection.Open();
+                ds = new DataSet();
+
+                adapter = new MySqlDataAdapter(cmd);
+                adapter.Fill(ds);
+
+                var reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    orden.Add(new Orden()
+                    {
+                        Id = reader.GetInt32("id"),
+                        Fecha = reader.GetDateTime("Fecha"),
+                        ObservacionCliente = reader.GetString("observacion_cliente"),
+                        MetodoPagoId = reader.GetInt32("metodoPagoId"),
+                        OrdenEstadoId = reader.GetInt32("ordenEstadoId"),
+                        UsuarioId = reader.GetInt32("usuarioId")
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+
+            return orden;
+        }
+        //Por ID    
+        public Orden ObtenerOrdenexId(int id)
+
+        {
+            Orden orden = new Orden();
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "LeerOrdenPorId";
+                cmd.Parameters.Add(new MySqlParameter("p_Id", id));
+
+                cmd.Connection.Open();
+                ds = new DataSet();
+
+                adapter = new MySqlDataAdapter(cmd);
+                adapter.Fill(ds);
+
+                var reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    orden = new Orden()
+                    {
+                        Id = reader.GetInt32("id"),
+                        Fecha = reader.GetDateTime("Fecha"),
+                        ObservacionCliente = reader.GetString("observacion_cliente"),
+                        MetodoPagoId = reader.GetInt32("metodoPagoId"),
+                        OrdenEstadoId = reader.GetInt32("ordenEstadoId"),
+                        UsuarioId = reader.GetInt32("usuarioId")
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+
+            return orden;
+        }
+
+        public int UpdateOrden(int idOrden, OrdenRequest ordenRequest)
+        {
+            try
+            {
+
+                cmd.Parameters.Clear();
+
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "ActualizarOrden";
+                cmd.Parameters.Add(new MySqlParameter("p_Fecha", ordenRequest.Fecha));
+                cmd.Parameters.Add(new MySqlParameter("p_ObservacionCliente", ordenRequest.ObservacionCliente));
+                cmd.Parameters.Add(new MySqlParameter("p_MetodoPagoId", ordenRequest.MetodoPagoId));
+                cmd.Parameters.Add(new MySqlParameter("p_OrdenEstadoId", ordenRequest.OrdenEstadoId));
+                cmd.Parameters.Add(new MySqlParameter("p_UsuarioId", ordenRequest.UsuarioId));
+                cmd.Parameters.Add(new MySqlParameter("p_Id", idOrden));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        public int DeleteOrden(int id)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "EliminarOrden";
+                cmd.Parameters.Add(new MySqlParameter("p_Id", id));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        //CRUD ORDENDETALLE
+        public int CrearOrdenDetalle(OrdenDetalleRequest ordenDetalle)
+        {
+            try
+            {
+
+                cmd.Parameters.Clear();
+
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "CrearOrdenDetalle";
+                cmd.Parameters.Add(new MySqlParameter("p_ProductoId", ordenDetalle.ProductoId));
+                cmd.Parameters.Add(new MySqlParameter("p_Cantidad", ordenDetalle.Cantidad));
+                cmd.Parameters.Add(new MySqlParameter("p_Precio", ordenDetalle.Precio));
+                cmd.Parameters.Add(new MySqlParameter("p_Descuento", ordenDetalle.Descuento));
+                cmd.Parameters.Add(new MySqlParameter("p_OrdenId", ordenDetalle.OrdenId));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        public List<OrdenDetalle> ObtenerOrdenDetalle(int idOrden)
+
+        {
+            List<OrdenDetalle> ordenDetalles = new List<OrdenDetalle>();
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "LeerOrdenDetalle";
+                cmd.Parameters.Add(new MySqlParameter("p_OrdenId", idOrden));
+                
+                cmd.Connection.Open();
+                ds = new DataSet();
+
+                adapter = new MySqlDataAdapter(cmd);
+                adapter.Fill(ds);
+
+                var reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    ordenDetalles.Add(new OrdenDetalle()
+                    {
+                        Id = reader.GetInt32("id"),
+                        ProductoId = reader.GetInt32("productoId"),
+                        Cantidad = reader.GetInt32("cantidad"),
+                        Precio = reader.GetDecimal("precio"),
+                        Descuento = reader.GetInt32("descuento"),
+                        OrdenId = reader.GetInt32("ordenId"),
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+
+            return ordenDetalles;
+        }
+
+        public int UpdateOrdenDetalle(int idOrdenDetalle, OrdenDetalleRequest ordenDetalleRequest)
+        {
+            try
+            {
+
+                cmd.Parameters.Clear();
+
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "ActualizarOrdenDetalle";
+                cmd.Parameters.Add(new MySqlParameter("p_ProductoId", ordenDetalleRequest.ProductoId));
+                cmd.Parameters.Add(new MySqlParameter("p_Cantidad", ordenDetalleRequest.Cantidad));
+                cmd.Parameters.Add(new MySqlParameter("p_Precio", ordenDetalleRequest.Precio));
+                cmd.Parameters.Add(new MySqlParameter("p_Descuento", ordenDetalleRequest.Descuento));
+                cmd.Parameters.Add(new MySqlParameter("p_OrdenId", ordenDetalleRequest.OrdenId));
+                cmd.Parameters.Add(new MySqlParameter("p_Id", idOrdenDetalle));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        public int DeleteOrdenDetalle(int id)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "EliminarOrdenDetalle";
+                cmd.Parameters.Add(new MySqlParameter("p_Id", id));
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        public Orden ObtenerOrdenYDetallePorId(int id)
+        {
+
+            Orden orden = new Orden();
+            OrdenDetalle ordenDetalles = new OrdenDetalle();
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "ObtenerOrdenxId";
+                cmd.Parameters.Add(new MySqlParameter("p_Id", id));
+                cmd.Connection.Open();
+
+                // Obtener Orden
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        orden = new Orden()
+                        {
+                            Id = (int)reader["Id"],
+                            Fecha = (DateTime)reader["Fecha"],
+                            ObservacionCliente = (string)reader["observacion_cliente"],
+                            MetodoPagoId = (int)reader["Cliente"],
+                            OrdenEstadoId = (int)reader["Orden"],
+                            UsuarioId = (int)reader["Orden"]
+
+                        };
+                    }
+                }
+
+                // Obtener Detalles
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "ObtenerOrdenDetalle";
+                cmd.Parameters.Add(new MySqlParameter("p_OrdenId", id));
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        ordenDetalles = new OrdenDetalle
+                        {
+                            Id = (int)reader["Id"],
+                            ProductoId = (int)reader["ProductoId"],
+                            Cantidad = (int)reader["Cantidad"],
+                            Precio = (decimal)reader["Precio"],
+                            Descuento = (decimal)reader["Descuento"],
+                            OrdenId = (int)reader["OrdenId"]
+                        };
+                    }
+                }
+            }
+            catch (Exception ex) { }
+            finally { 
+                    
+            }
+            return orden;
+        }
+
 
     }
 }

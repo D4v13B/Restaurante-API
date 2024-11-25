@@ -13,6 +13,8 @@
         public MetodoPago MetodoPago { get; set; }
         public OrdenEstado OrdenEstado { get; set; }
         public Usuario Usuario { get; set; }
+
+        public List<OrdenDetalle> OrdenDetalles { get; set; }
     }
 
 }
