@@ -1758,6 +1758,125 @@ namespace Restaurante.Datos
             return orden;
         }
 
+        public List<Sucursal> ObtenerSucursales()
+{
+    List<Sucursal> sucursales = new List<Sucursal>();
+    try
+    {
+        cmd.Parameters.Clear();
+        cmd.CommandType = CommandType.Text;
+        cmd.CommandText = "SELECT id, nombre, direccion FROM sucursales";
+
+        cmd.Connection.Open();
+        using (var reader = cmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                sucursales.Add(new Sucursal
+                {
+                    Id = Convert.ToInt32(reader["id"]),
+                    Nombre = reader["nombre"].ToString(),
+                    Direccion = reader["direccion"].ToString()
+                });
+            }
+        }
+    }
+    finally
+    {
+        cmd.Connection.Close();
+    }
+    return sucursales;
+}
+
+public Sucursal ObtenerSucursalPorId(int id)
+{
+    Sucursal sucursal = null;
+    try
+    {
+        cmd.Parameters.Clear();
+        cmd.CommandType = CommandType.Text;
+        cmd.CommandText = "SELECT id, nombre, direccion FROM sucursales WHERE id = @id";
+        cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+        cmd.Connection.Open();
+        using (var reader = cmd.ExecuteReader())
+        {
+            if (reader.Read())
+            {
+                sucursal = new Sucursal
+                {
+                    Id = Convert.ToInt32(reader["id"]),
+                    Nombre = reader["nombre"].ToString(),
+                    Direccion = reader["direccion"].ToString()
+                };
+            }
+        }
+    }
+    finally
+    {
+        cmd.Connection.Close();
+    }
+    return sucursal;
+}
+
+public int GuardarSucursal(SucursalRequest sucursalRequest)
+{
+    try
+    {
+        cmd.Parameters.Clear();
+        cmd.CommandType = CommandType.Text;
+        cmd.CommandText = "INSERT INTO sucursales (nombre, direccion) VALUES (@nombre, @direccion)";
+        cmd.Parameters.Add(new MySqlParameter("@nombre", sucursalRequest.Nombre));
+        cmd.Parameters.Add(new MySqlParameter("@direccion", sucursalRequest.Direccion));
+
+        cmd.Connection.Open();
+        return cmd.ExecuteNonQuery();
+    }
+    finally
+    {
+        cmd.Connection.Close();
+    }
+}
+
+public int ActualizarSucursal(int id, SucursalRequest sucursalRequest)
+{
+    try
+    {
+        cmd.Parameters.Clear();
+        cmd.CommandType = CommandType.Text;
+        cmd.CommandText = "UPDATE sucursales SET nombre = @nombre, direccion = @direccion WHERE id = @id";
+        cmd.Parameters.Add(new MySqlParameter("@nombre", sucursalRequest.Nombre));
+        cmd.Parameters.Add(new MySqlParameter("@direccion", sucursalRequest.Direccion));
+        cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+        cmd.Connection.Open();
+        return cmd.ExecuteNonQuery();
+    }
+    finally
+    {
+        cmd.Connection.Close();
+    }
+}
+
+public int EliminarSucursal(int id)
+{
+    try
+    {
+        cmd.Parameters.Clear();
+        cmd.CommandType = CommandType.Text;
+        cmd.CommandText = "DELETE FROM sucursales WHERE id = @id";
+        cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+        cmd.Connection.Open();
+        return cmd.ExecuteNonQuery();
+    }
+    finally
+    {
+        cmd.Connection.Close();
+    }
+}
+
+
 
     }
 }
