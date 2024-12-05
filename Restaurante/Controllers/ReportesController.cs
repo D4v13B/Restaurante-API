@@ -10,17 +10,17 @@ namespace Restaurante.Controllers
     public class ReportesController : ControllerBase
     {
         [HttpGet("porProducto")]
-        public DataTable GetTotalesXProducto()
+        public List<TotalFacturadoXProducto> GetTotalesXProducto()
         {
             return new Db().GetTotalesFacturadosPorProducto();
         }
         [HttpGet("PorMetodoPago")]
-        public DataTable GetTotalesXMetodoPago()
+        public List<CantXMetodoPago> GetTotalesXMetodoPago()
         {
             return new Db().GetCantidadVendidaPorMetodoPago();
         }
         [HttpGet("Top10/{fechaInicio}/{fechaFin}")]
-        public DataTable GetTopXFecha(DateTime fechaInicio, DateTime fechaFin)
+        public List<TopProductosVendidos> GetTopXFecha(DateTime fechaInicio, DateTime fechaFin)
         {
             return new Db().GetTopProductosMasVendidos(fechaInicio, fechaFin);
         }

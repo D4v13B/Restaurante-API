@@ -1758,9 +1758,9 @@ namespace Restaurante.Datos
             return orden;
         }
 
-        public DataTable GetTopProductosMasVendidos(DateTime fechaInicio, DateTime fechaFin)
+        public List<TopProductosVendidos> GetTopProductosMasVendidos(DateTime fechaInicio, DateTime fechaFin)
         {
-            DataTable result = new DataTable();
+            var result = new List<TopProductosVendidos>();
 
             try
             {
@@ -1775,9 +1775,16 @@ namespace Restaurante.Datos
                 // Abrir conexión
                 cmd.Connection.Open();
 
-                using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                using (var reader = cmd.ExecuteReader())
                 {
-                    adapter.Fill(result); // Llenar el DataTable con los resultados
+                    while (reader.Read())
+                    {
+                        result.Add(new TopProductosVendidos
+                        {
+                            Producto = reader["Producto"].ToString(),
+                            TotalVendido = Convert.ToInt32(reader["TotalVendido"])
+                        });
+                    }
                 }
             }
             catch (Exception ex)
@@ -1792,64 +1799,76 @@ namespace Restaurante.Datos
             return result; // Devolver los datos
         }
 
-        public DataTable GetCantidadVendidaPorMetodoPago()
+        public List<CantXMetodoPago> GetCantidadVendidaPorMetodoPago()
         {
-            DataTable result = new DataTable();
+            var result = new List<CantXMetodoPago>();
 
             try
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.CommandText = "CantidadPorMetodoPago"; // Nombre del procedimiento almacenado
-
-                // Abrir conexión
+                cmd.CommandText = "TotalesFacturadosPorProducto";
                 cmd.Connection.Open();
 
-                using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+
+
+                using (var reader = cmd.ExecuteReader())
                 {
-                    adapter.Fill(result); // Llenar el DataTable con los resultados
+                    while (reader.Read())
+                    {
+                        result.Add(new CantXMetodoPago
+                        {
+                            MetodoPago = reader["MetodoPago"].ToString(),
+                            CantidadOrdenes = Convert.ToInt32(reader["CantidadOrdenes"])
+                        });
+                    }
                 }
+
+
             }
             catch (Exception ex)
             {
-                throw new Exception("Error al ejecutar el procedimiento almacenado", ex);
-            }
-            finally
-            {
-                cmd.Connection.Close(); // Asegurar el cierre de la conexión
+                // Manejo de excepciones
+                throw new Exception("Error al obtener los datos desde la base de datos", ex);
             }
 
-            return result; // Devolver los datos
+            return result;
         }
 
-        public DataTable GetTotalesFacturadosPorProducto()
+        public List<TotalFacturadoXProducto> GetTotalesFacturadosPorProducto()
         {
-            DataTable result = new DataTable();
+            var result = new List<TotalFacturadoXProducto>();
 
             try
             {
-                cmd.Parameters.Clear();
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.CommandText = "TotalesFacturadosPorProducto"; // Nombre del procedimiento almacenado
+                    cmd.Parameters.Clear();
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandText = "TotalesFacturadosPorProducto";
+                    cmd.Connection.Open();
+                    
+                        
 
-                // Abrir conexión
-                cmd.Connection.Open();
-
-                using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
-                {
-                    adapter.Fill(result); // Llenar el DataTable con los resultados
-                }
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                result.Add(new TotalFacturadoXProducto
+                                {
+                                    Producto = reader["Producto"].ToString(),
+                                    TotalFacturado = Convert.ToDecimal(reader["TotalFacturado"])
+                                });
+                            }
+                        }
+                    
+                
             }
             catch (Exception ex)
             {
-                throw new Exception("Error al ejecutar el procedimiento almacenado", ex);
-            }
-            finally
-            {
-                cmd.Connection.Close(); // Asegurar el cierre de la conexión
+                // Manejo de excepciones
+                throw new Exception("Error al obtener los datos desde la base de datos", ex);
             }
 
-            return result; // Devolver los datos
+            return result;
         }
 
 
