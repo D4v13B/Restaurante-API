@@ -22,12 +22,6 @@ namespace Restaurante.Controllers
             return new Db().ObtenerOrdenexId(id);
         }
 
-        //Orden y detalle 
-        [HttpGet("/detalle{id}")]
-        public Orden GetOrderYDetailsById(int id)
-        {
-            return new Db().ObtenerOrdenYDetallePorId(id);
-        }
 
 
         [HttpPost]

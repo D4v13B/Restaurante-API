@@ -1923,6 +1923,119 @@ namespace Restaurante.Datos
             return orden;
         }
 
+        public List<TopProductosVendidos> GetTopProductosMasVendidos(DateTime fechaInicio, DateTime fechaFin)
+        {
+            var result = new List<TopProductosVendidos>();
+
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "TopProductosVendidosPorFechas"; // Nombre del procedimiento almacenado
+
+                // Agregar parámetros
+                cmd.Parameters.Add(new MySqlParameter("fechaInicio", fechaInicio));
+                cmd.Parameters.Add(new MySqlParameter("fechaFin", fechaFin));
+
+                // Abrir conexión
+                cmd.Connection.Open();
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        result.Add(new TopProductosVendidos
+                        {
+                            Producto = reader["Producto"].ToString(),
+                            TotalVendido = Convert.ToInt32(reader["TotalVendido"])
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error al ejecutar el procedimiento almacenado", ex);
+            }
+            finally
+            {
+                cmd.Connection.Close(); // Asegurar el cierre de la conexión
+            }
+
+            return result; // Devolver los datos
+        }
+
+        public List<CantXMetodoPago> GetCantidadVendidaPorMetodoPago()
+        {
+            var result = new List<CantXMetodoPago>();
+
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "TotalesFacturadosPorProducto";
+                cmd.Connection.Open();
+
+
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        result.Add(new CantXMetodoPago
+                        {
+                            MetodoPago = reader["MetodoPago"].ToString(),
+                            CantidadOrdenes = Convert.ToInt32(reader["CantidadOrdenes"])
+                        });
+                    }
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                // Manejo de excepciones
+                throw new Exception("Error al obtener los datos desde la base de datos", ex);
+            }
+
+            return result;
+        }
+
+        public List<TotalFacturadoXProducto> GetTotalesFacturadosPorProducto()
+        {
+            var result = new List<TotalFacturadoXProducto>();
+
+            try
+            {
+                    cmd.Parameters.Clear();
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandText = "TotalesFacturadosPorProducto";
+                    cmd.Connection.Open();
+                    
+                        
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                result.Add(new TotalFacturadoXProducto
+                                {
+                                    Producto = reader["Producto"].ToString(),
+                                    TotalFacturado = Convert.ToDecimal(reader["TotalFacturado"])
+                                });
+                            }
+                        }
+                    
+                
+            }
+            catch (Exception ex)
+            {
+                // Manejo de excepciones
+                throw new Exception("Error al obtener los datos desde la base de datos", ex);
+            }
+
+            return result;
+        }
+
         public List<Sucursal> ObtenerSucursales()
         {
             List<Sucursal> sucursales = new List<Sucursal>();
