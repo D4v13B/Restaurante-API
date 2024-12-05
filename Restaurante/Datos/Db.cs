@@ -1758,6 +1758,100 @@ namespace Restaurante.Datos
             return orden;
         }
 
+        public DataTable GetTopProductosMasVendidos(DateTime fechaInicio, DateTime fechaFin)
+        {
+            DataTable result = new DataTable();
+
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "TopProductosVendidosPorFechas"; // Nombre del procedimiento almacenado
+
+                // Agregar parámetros
+                cmd.Parameters.Add(new MySqlParameter("fechaInicio", fechaInicio));
+                cmd.Parameters.Add(new MySqlParameter("fechaFin", fechaFin));
+
+                // Abrir conexión
+                cmd.Connection.Open();
+
+                using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                {
+                    adapter.Fill(result); // Llenar el DataTable con los resultados
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error al ejecutar el procedimiento almacenado", ex);
+            }
+            finally
+            {
+                cmd.Connection.Close(); // Asegurar el cierre de la conexión
+            }
+
+            return result; // Devolver los datos
+        }
+
+        public DataTable GetCantidadVendidaPorMetodoPago()
+        {
+            DataTable result = new DataTable();
+
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "CantidadPorMetodoPago"; // Nombre del procedimiento almacenado
+
+                // Abrir conexión
+                cmd.Connection.Open();
+
+                using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                {
+                    adapter.Fill(result); // Llenar el DataTable con los resultados
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error al ejecutar el procedimiento almacenado", ex);
+            }
+            finally
+            {
+                cmd.Connection.Close(); // Asegurar el cierre de la conexión
+            }
+
+            return result; // Devolver los datos
+        }
+
+        public DataTable GetTotalesFacturadosPorProducto()
+        {
+            DataTable result = new DataTable();
+
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "TotalesFacturadosPorProducto"; // Nombre del procedimiento almacenado
+
+                // Abrir conexión
+                cmd.Connection.Open();
+
+                using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                {
+                    adapter.Fill(result); // Llenar el DataTable con los resultados
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error al ejecutar el procedimiento almacenado", ex);
+            }
+            finally
+            {
+                cmd.Connection.Close(); // Asegurar el cierre de la conexión
+            }
+
+            return result; // Devolver los datos
+        }
+
 
     }
 }

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 namespace Restaurante.Controllers
 {
     [ApiController]
-    [Authorize]
     [Route("api/[controller]")]
     public class UsuarioController : ControllerBase
     {
