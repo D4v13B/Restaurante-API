@@ -1,4 +1,6 @@
-﻿using MySql.Data.MySqlClient;
+﻿using Heiwa.Models;
+using MySql.Data.MySqlClient;
+using MySqlX.XDevAPI.Common;
 using MySqlX.XDevAPI.CRUD;
 using Restaurante.Controllers;
 using Restaurante.Models;
@@ -22,6 +24,60 @@ namespace Restaurante.Datos
             cmd = new MySqlCommand();
             cmd.Connection = con;
         }
+
+        public int ActualizarUsuario(int id, UsuarioRequest usuarioRequest)
+        {
+            try
+            {
+                // Limpiar parámetros de la consulta anterior (si los hay)
+                cmd.Parameters.Clear();
+
+                // Establecer el tipo de comando y la consulta SQL
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = @"
+            UPDATE usuarios 
+            SET 
+                nombre = @nombre, 
+                password = @password, 
+                email = @email, 
+                telefono = @telefono, 
+                usuarioTipoId = @usuarioTipoId
+            WHERE id = @id";
+
+                cmd.Parameters.Add(new MySqlParameter("@nombre", usuarioRequest.Nombre));
+                cmd.Parameters.Add(new MySqlParameter("@password", usuarioRequest.Password));
+                cmd.Parameters.Add(new MySqlParameter("@email", usuarioRequest.Email));
+                cmd.Parameters.Add(new MySqlParameter("@telefono", usuarioRequest.Telefono ?? (object)DBNull.Value));
+                cmd.Parameters.Add(new MySqlParameter("@usuarioTipoId", usuarioRequest.UsuarioTipoId));
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        public int EliminarUsuario(int id)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "DELETE FROM usuarios WHERE id = @id";
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery(); // Devuelve el número de filas afectadas
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
         public List<Usuario> ObtenerUsuarios()
         {
             List<Usuario> usuarios = new List<Usuario>();
@@ -72,6 +128,9 @@ namespace Restaurante.Datos
 
             return usuarios;
         }
+
+
+
 
         public int SaveUser(UsuarioRequest usuario)
         {
@@ -775,18 +834,48 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "INSERT INTO promociones(nombre, fecha_validez_inicio, fecha_validez_final, precio, foto) VALUES(@n, @fvi, @fvf, @p, @f)";
+                cmd.CommandText = "INSERT INTO promociones(nombre, fecha_validez_inicio, fecha_validez_final, precio) VALUES(@n, @fvi, @fvf, @p)";
                 cmd.Parameters.Add(new MySqlParameter("@n", promocionRequest.Nombre));
                 cmd.Parameters.Add(new MySqlParameter("@fvi", promocionRequest.FechaValidezInicio));
                 cmd.Parameters.Add(new MySqlParameter("@fvf", promocionRequest.FechaValidezFinal));
                 cmd.Parameters.Add(new MySqlParameter("@p", promocionRequest.Precio));
-                cmd.Parameters.Add(new MySqlParameter("@f", promocionRequest.Foto));
+                //cmd.Parameters.Add(new MySqlParameter("@f", promocionRequest.Foto));
 
                 cmd.Connection.Open();
-                return cmd.ExecuteNonQuery();
+                int result = cmd.ExecuteNonQuery();
+
+                int promocionId = 0;
+                if (result > 0)
+                {
+                    cmd.CommandText = "SELECT LAST_INSERT_ID()";
+                    promocionId = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                if (promocionId > 0)
+                {
+                    cmd.Parameters.Clear();
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText = "INSERT INTO promociones_detalles(productoId, promocionId) VALUES(@productoId, @promocionId)";
+
+                    List<ProductPromocion> products = promocionRequest.Productos;
+
+                    foreach (var producto in products)
+                    {
+                        cmd.Parameters.Add(new MySqlParameter("@productoId", producto.productId));
+                        cmd.Parameters.Add(new MySqlParameter("@promocionId", promocionId)); // Usamos el ID de la promoción
+
+                        result = cmd.ExecuteNonQuery(); // Ejecuta la inserción para cada producto
+
+                        // Limpiar los parámetros para la siguiente iteración
+                        cmd.Parameters.Clear();
+                    }
+                }
+
+                return 0;
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
                 throw;
             }
             finally
@@ -852,26 +941,64 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "SELECT id, nombre, fecha_validez_inicio, fecha_validez_final, precio, foto FROM promociones";
+
+                // Consulta SQL para traer todas las promociones
+                cmd.CommandText = @"
+            SELECT id, nombre, fecha_validez_inicio, fecha_validez_final, precio, foto
+            FROM promociones";
 
                 cmd.Connection.Open();
                 var reader = cmd.ExecuteReader();
 
+                // Primero, obtenemos todas las promociones
                 while (reader.Read())
                 {
-                    promociones.Add(new Promocion
+                    var promocion = new Promocion
                     {
-                        Id = reader.GetInt32("id"),
-                        Nombre = reader.GetString("nombre"),
-                        FechaValidezInicio = reader.GetDateTime("fecha_validez_inicio"),
-                        FechaValidezFinal = reader.GetDateTime("fecha_validez_final"),
-                        Precio = reader.GetDecimal("precio"),
-                        Foto = reader.GetString("foto")
-                    });
+                        Id = reader.IsDBNull(reader.GetOrdinal("id")) ? 0 : reader.GetInt32("id"),
+                        Nombre = reader.IsDBNull(reader.GetOrdinal("nombre")) ? string.Empty : reader.GetString("nombre"),
+                        FechaValidezInicio = reader.IsDBNull(reader.GetOrdinal("fecha_validez_inicio")) ? DateTime.MinValue : reader.GetDateTime("fecha_validez_inicio"),
+                        FechaValidezFinal = reader.IsDBNull(reader.GetOrdinal("fecha_validez_final")) ? DateTime.MinValue : reader.GetDateTime("fecha_validez_final"),
+                        Precio = reader.IsDBNull(reader.GetOrdinal("precio")) ? 0 : reader.GetDecimal("precio"),
+                        Foto = reader.IsDBNull(reader.GetOrdinal("foto")) ? string.Empty : reader.GetString("foto"),
+                        Detalles = new List<PromocionDetalle>() // Inicializamos la lista de detalles
+                    };
+
+                    promociones.Add(promocion);
+                }
+
+                reader.Close();  // Cerrar el reader de promociones
+
+                // Ahora, para cada promoción, hacemos una consulta adicional para obtener sus detalles
+                foreach (var promocion in promociones)
+                {
+                    // Consulta SQL para obtener los detalles de una promoción específica
+                    cmd.CommandText = @"
+                SELECT pd.id AS promocion_detalle_id, pd.productoId, pd.promocionId
+                FROM promociones_detalles pd
+                WHERE pd.promocionId = @PromocionId";
+
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@PromocionId", promocion.Id);
+
+                    reader = cmd.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        promocion.Detalles.Add(new PromocionDetalle
+                        {
+                            Id = reader.IsDBNull(reader.GetOrdinal("promocion_detalle_id")) ? 0 : reader.GetInt32("promocion_detalle_id"),
+                            ProductoId = reader.IsDBNull(reader.GetOrdinal("productoId")) ? 0 : reader.GetInt32("productoId"),
+                            PromocionId = reader.IsDBNull(reader.GetOrdinal("promocionId")) ? 0 : reader.GetInt32("promocionId")
+                        });
+                    }
+
+                    reader.Close(); // Cerrar el reader de detalles
                 }
             }
             catch (Exception ex)
             {
+                // Manejo de errores
                 throw;
             }
             finally
@@ -882,6 +1009,8 @@ namespace Restaurante.Datos
             return promociones;
         }
 
+
+
         public Promocion ObtenerPromocionPorId(int id)
         {
             Promocion promocion = null;
@@ -890,7 +1019,7 @@ namespace Restaurante.Datos
             {
                 cmd.Parameters.Clear();
                 cmd.CommandType = CommandType.Text;
-                cmd.CommandText = "SELECT id, nombre, fecha_validez_inicio, fecha_validez_final, precio, foto FROM promociones WHERE id = @id";
+                cmd.CommandText = "SELECT id, nombre, fecha_validez_inicio, fecha_validez_final, precio, foto FROM promociones WHERE promocionId = @id";
                 cmd.Parameters.Add(new MySqlParameter("@id", id));
 
                 cmd.Connection.Open();
@@ -1408,32 +1537,67 @@ namespace Restaurante.Datos
         //CRUD ORDEN
         public int CrearOrden(OrdenRequest ordenRequest)
         {
+            int ordenId = 0;
+
             try
             {
+                cmd.Parameters.Clear();
 
-                    cmd.Parameters.Clear();
+                // Configuración para el procedimiento almacenado
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "CrearOrden";
+                cmd.Parameters.Add(new MySqlParameter("p_Fecha", ordenRequest.Fecha));
+                cmd.Parameters.Add(new MySqlParameter("p_ObservacionCliente", ordenRequest.ObservacionCliente));
+                cmd.Parameters.Add(new MySqlParameter("p_MetodoPagoId", ordenRequest.MetodoPagoId));
+                cmd.Parameters.Add(new MySqlParameter("p_OrdenEstadoId", ordenRequest.OrdenEstadoId));
+                cmd.Parameters.Add(new MySqlParameter("p_UsuarioId", ordenRequest.UsuarioId));
 
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.CommandText = "CrearOrden";
-                    cmd.Parameters.Add(new MySqlParameter("p_Fecha", ordenRequest.Fecha));
-                    cmd.Parameters.Add(new MySqlParameter("p_ObservacionCliente", ordenRequest.ObservacionCliente));
-                    cmd.Parameters.Add(new MySqlParameter("p_MetodoPagoId", ordenRequest.MetodoPagoId));
-                    cmd.Parameters.Add(new MySqlParameter("p_OrdenEstadoId", ordenRequest.OrdenEstadoId));
-                    cmd.Parameters.Add(new MySqlParameter("p_UsuarioId", ordenRequest.UsuarioId));
+                cmd.Connection.Open();
 
-                    cmd.Connection.Open();
-                    return cmd.ExecuteNonQuery();
-                
-            }catch (Exception ex) 
-            { 
-                throw; 
+                // Ejecuta la creación de la orden
+                int result = cmd.ExecuteNonQuery();
+
+                if (result > 0)
+                {
+                    // Obtiene el ID de la orden recién creada
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText = "SELECT LAST_INSERT_ID()";
+                    ordenId = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // Inserta los detalles si la orden fue creada
+                if (ordenId > 0 && ordenRequest.DetalleOrden != null)
+                {
+                    foreach (var producto in ordenRequest.DetalleOrden)
+                    {
+                        cmd.Parameters.Clear();
+                        cmd.CommandType = CommandType.Text;
+                        cmd.CommandText = "INSERT INTO orden_detalles (productoId, cantidad, precio, ordenId) " +
+                                          "VALUES (@productoId, @cantidad, @precio, @ordenId)";
+                        cmd.Parameters.Add(new MySqlParameter("@productoId", producto.ProductoId));
+                        cmd.Parameters.Add(new MySqlParameter("@cantidad", producto.Cantidad));
+                        cmd.Parameters.Add(new MySqlParameter("@precio", producto.Precio));
+                        cmd.Parameters.Add(new MySqlParameter("@ordenId", ordenId));
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                return ordenId; // Devuelve el ID de la orden creada
             }
-            finally {
-                cmd.Connection.Close(); 
+            catch (Exception ex)
+            {
+                // Maneja el error adecuadamente (puedes agregar logs)
+                throw new Exception("Error al crear la orden", ex);
+            }
+            finally
+            {
+                cmd.Connection.Close();
             }
         }
 
-        
+
+
         public List<Orden> ObtenerOrdenes()
 
         {
@@ -1613,7 +1777,7 @@ namespace Restaurante.Datos
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.CommandText = "LeerOrdenDetalle";
                 cmd.Parameters.Add(new MySqlParameter("p_OrdenId", idOrden));
-                
+
                 cmd.Connection.Open();
                 ds = new DataSet();
 
@@ -1739,7 +1903,7 @@ namespace Restaurante.Datos
                 {
                     while (reader.Read())
                     {
-                        ordenDetalles.Add (new OrdenDetalle
+                        ordenDetalles.Add(new OrdenDetalle
                         {
                             Id = (int)reader["Id"],
                             ProductoId = (int)reader["ProductoId"],
@@ -1752,130 +1916,422 @@ namespace Restaurante.Datos
                 }
             }
             catch (Exception ex) { }
-            finally { 
-                    
+            finally
+            {
+
             }
             return orden;
         }
 
         public List<Sucursal> ObtenerSucursales()
-{
-    List<Sucursal> sucursales = new List<Sucursal>();
-    try
-    {
-        cmd.Parameters.Clear();
-        cmd.CommandType = CommandType.Text;
-        cmd.CommandText = "SELECT id, nombre, direccion FROM sucursales";
-
-        cmd.Connection.Open();
-        using (var reader = cmd.ExecuteReader())
         {
-            while (reader.Read())
+            List<Sucursal> sucursales = new List<Sucursal>();
+            try
             {
-                sucursales.Add(new Sucursal
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "SELECT id, nombre, direccion FROM sucursales";
+
+                cmd.Connection.Open();
+                using (var reader = cmd.ExecuteReader())
                 {
-                    Id = Convert.ToInt32(reader["id"]),
-                    Nombre = reader["nombre"].ToString(),
-                    Direccion = reader["direccion"].ToString()
-                });
+                    while (reader.Read())
+                    {
+                        sucursales.Add(new Sucursal
+                        {
+                            Id = Convert.ToInt32(reader["id"]),
+                            Nombre = reader["nombre"].ToString(),
+                            Direccion = reader["direccion"].ToString()
+                        });
+                    }
+                }
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+            return sucursales;
+        }
+
+        public Sucursal ObtenerSucursalPorId(int id)
+        {
+            Sucursal sucursal = null;
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "SELECT id, nombre, direccion FROM sucursales WHERE id = @id";
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+                cmd.Connection.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        sucursal = new Sucursal
+                        {
+                            Id = Convert.ToInt32(reader["id"]),
+                            Nombre = reader["nombre"].ToString(),
+                            Direccion = reader["direccion"].ToString()
+                        };
+                    }
+                }
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+            return sucursal;
+        }
+
+        public int GuardarSucursal(SucursalRequest sucursalRequest)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "INSERT INTO sucursales (nombre, direccion) VALUES (@nombre, @direccion)";
+                cmd.Parameters.Add(new MySqlParameter("@nombre", sucursalRequest.Nombre));
+                cmd.Parameters.Add(new MySqlParameter("@direccion", sucursalRequest.Direccion));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
             }
         }
-    }
-    finally
-    {
-        cmd.Connection.Close();
-    }
-    return sucursales;
-}
 
-public Sucursal ObtenerSucursalPorId(int id)
-{
-    Sucursal sucursal = null;
-    try
-    {
-        cmd.Parameters.Clear();
-        cmd.CommandType = CommandType.Text;
-        cmd.CommandText = "SELECT id, nombre, direccion FROM sucursales WHERE id = @id";
-        cmd.Parameters.Add(new MySqlParameter("@id", id));
-
-        cmd.Connection.Open();
-        using (var reader = cmd.ExecuteReader())
+        public int ActualizarSucursal(int id, SucursalRequest sucursalRequest)
         {
-            if (reader.Read())
+            try
             {
-                sucursal = new Sucursal
-                {
-                    Id = Convert.ToInt32(reader["id"]),
-                    Nombre = reader["nombre"].ToString(),
-                    Direccion = reader["direccion"].ToString()
-                };
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "UPDATE sucursales SET nombre = @nombre, direccion = @direccion WHERE id = @id";
+                cmd.Parameters.Add(new MySqlParameter("@nombre", sucursalRequest.Nombre));
+                cmd.Parameters.Add(new MySqlParameter("@direccion", sucursalRequest.Direccion));
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
             }
         }
-    }
-    finally
-    {
-        cmd.Connection.Close();
-    }
-    return sucursal;
-}
 
-public int GuardarSucursal(SucursalRequest sucursalRequest)
-{
-    try
-    {
-        cmd.Parameters.Clear();
-        cmd.CommandType = CommandType.Text;
-        cmd.CommandText = "INSERT INTO sucursales (nombre, direccion) VALUES (@nombre, @direccion)";
-        cmd.Parameters.Add(new MySqlParameter("@nombre", sucursalRequest.Nombre));
-        cmd.Parameters.Add(new MySqlParameter("@direccion", sucursalRequest.Direccion));
+        public int EliminarSucursal(int id)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "DELETE FROM sucursales WHERE id = @id";
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
 
-        cmd.Connection.Open();
-        return cmd.ExecuteNonQuery();
-    }
-    finally
-    {
-        cmd.Connection.Close();
-    }
-}
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
 
-public int ActualizarSucursal(int id, SucursalRequest sucursalRequest)
-{
-    try
-    {
-        cmd.Parameters.Clear();
-        cmd.CommandType = CommandType.Text;
-        cmd.CommandText = "UPDATE sucursales SET nombre = @nombre, direccion = @direccion WHERE id = @id";
-        cmd.Parameters.Add(new MySqlParameter("@nombre", sucursalRequest.Nombre));
-        cmd.Parameters.Add(new MySqlParameter("@direccion", sucursalRequest.Direccion));
-        cmd.Parameters.Add(new MySqlParameter("@id", id));
+        // Obtener todas las reservas
+        public List<Reserva> ObtenerReservas()
+        {
+            var reservas = new List<Reserva>();
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "SELECT Id, Nombre, Telefono, FechaHoraReserva FROM reservas";
 
-        cmd.Connection.Open();
-        return cmd.ExecuteNonQuery();
-    }
-    finally
-    {
-        cmd.Connection.Close();
-    }
-}
+                cmd.Connection.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        reservas.Add(new Reserva
+                        {
+                            Id = Convert.ToInt32(reader["Id"]),
+                            Nombre = reader["Nombre"].ToString(),
+                            Telefono = reader["Telefono"].ToString(),
+                            FechaHoraReserva = Convert.ToDateTime(reader["FechaHoraReserva"])
+                        });
+                    }
+                }
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+            return reservas;
+        }
 
-public int EliminarSucursal(int id)
-{
-    try
-    {
-        cmd.Parameters.Clear();
-        cmd.CommandType = CommandType.Text;
-        cmd.CommandText = "DELETE FROM sucursales WHERE id = @id";
-        cmd.Parameters.Add(new MySqlParameter("@id", id));
+        // Obtener una reserva por ID
+        public Reserva ObtenerReservaPorId(int id)
+        {
+            Reserva reserva = null;
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "SELECT Id, Nombre, Telefono, FechaHoraReserva FROM reservas WHERE Id = @id";
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
 
-        cmd.Connection.Open();
-        return cmd.ExecuteNonQuery();
-    }
-    finally
-    {
-        cmd.Connection.Close();
-    }
-}
+                cmd.Connection.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        reserva = new Reserva
+                        {
+                            Id = Convert.ToInt32(reader["Id"]),
+                            Nombre = reader["Nombre"].ToString(),
+                            Telefono = reader["Telefono"].ToString(),
+                            FechaHoraReserva = Convert.ToDateTime(reader["FechaHoraReserva"])
+                        };
+                    }
+                }
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+            return reserva;
+        }
 
+        // Crear una nueva reserva
+        public int CrearReserva(ReservaRequest reserva)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "INSERT INTO reservas (Nombre, Telefono, FechaHoraReserva) VALUES (@Nombre, @Telefono, @FechaHoraReserva)";
+                cmd.Parameters.Add(new MySqlParameter("@Nombre", reserva.Nombre));
+                cmd.Parameters.Add(new MySqlParameter("@Telefono", reserva.Telefono));
+                cmd.Parameters.Add(new MySqlParameter("@FechaHoraReserva", reserva.FechaHoraReserva));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        // Actualizar una reserva existente
+        public int ActualizarReserva(int id, ReservaRequest reserva)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "UPDATE reservas SET Nombre = @Nombre, Telefono = @Telefono, FechaHoraReserva = @FechaHoraReserva WHERE Id = @Id";
+                cmd.Parameters.Add(new MySqlParameter("@Nombre", reserva.Nombre));
+                cmd.Parameters.Add(new MySqlParameter("@Telefono", reserva.Telefono));
+                cmd.Parameters.Add(new MySqlParameter("@FechaHoraReserva", reserva.FechaHoraReserva));
+                cmd.Parameters.Add(new MySqlParameter("@Id", id));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        // Eliminar una reserva
+        public int EliminarReserva(int id)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "DELETE FROM reservas WHERE Id = @Id";
+                cmd.Parameters.Add(new MySqlParameter("@Id", id));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        public List<Pedido> ObtenerPedidos()
+        {
+            List<Pedido> pedidos = new List<Pedido>();
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "SELECT id, cliente, producto, producto_img, quantity, value FROM pedidos";
+
+                cmd.Connection.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        pedidos.Add(new Pedido
+                        {
+                            Id = Convert.ToInt32(reader["id"]),
+                            Cliente = reader["cliente"].ToString(),
+                            Producto = reader["producto"].ToString(),
+                            ProductoImg = reader["producto_img"].ToString(),
+                            Value = Convert.ToDouble(reader["value"]),
+                            Quantity = Convert.ToInt32(reader["quantity"])
+                        });
+                    }
+                }
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+            return pedidos;
+        }
+
+        public Pedido ObtenerPedidoPorId(int id)
+        {
+            Pedido pedido = null;
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "SELECT id, cliente, producto, producto_img FROM pedidos WHERE id = @id";
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+                cmd.Connection.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        pedido = new Pedido
+                        {
+                            Id = Convert.ToInt32(reader["id"]),
+                            Cliente = reader["cliente"].ToString(),
+                            Producto = reader["producto"].ToString(),
+                            ProductoImg = reader["producto_img"].ToString(),
+                            Value = Convert.ToDouble(reader["value"]),
+                            Quantity = Convert.ToInt32(reader["quantity"])
+                        };
+                    }
+                }
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+            return pedido;
+        }
+
+        public int GuardarPedido(PedidoRequest pedidoRequest)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "INSERT INTO pedidos (cliente, producto, value, quantity) VALUES (@cliente, @producto, @value, @quantity)";
+                cmd.Parameters.Add(new MySqlParameter("@cliente", pedidoRequest.Cliente));
+                cmd.Parameters.Add(new MySqlParameter("@producto", pedidoRequest.Producto));
+                // cmd.Parameters.Add(new MySqlParameter("@producto_img", pedidoRequest.ProductoImg));
+                cmd.Parameters.Add(new MySqlParameter("@value", pedidoRequest.Value));
+                cmd.Parameters.Add(new MySqlParameter("@quantity", pedidoRequest.Quantity));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        public int ActualizarPedido(int id, PedidoRequest pedidoRequest)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "UPDATE pedidos SET cliente = @cliente, producto = @producto, producto_img = @producto_img WHERE id = @id";
+                cmd.Parameters.Add(new MySqlParameter("@cliente", pedidoRequest.Cliente));
+                cmd.Parameters.Add(new MySqlParameter("@producto", pedidoRequest.Producto));
+                cmd.Parameters.Add(new MySqlParameter("@producto_img", pedidoRequest.ProductoImg));
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        public int EliminarPedido(int id)
+        {
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "DELETE FROM pedidos WHERE id = @id";
+                cmd.Parameters.Add(new MySqlParameter("@id", id));
+
+                cmd.Connection.Open();
+                return cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
+
+        //Reportes
+        public List<Orden> ObtenerOrdenesReporte()
+        {
+            List<Orden> ordenes = new List<Orden>();
+            try
+            {
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = "SELECT * FROM orden";
+
+                cmd.Connection.Open();
+                MySqlDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    Orden orden = new Orden
+                    {
+                        Id = reader.GetInt32("id"),
+                        Fecha = reader.GetDateTime("fecha"),
+                        ObservacionCliente = reader.IsDBNull(reader.GetOrdinal("observacion_cliente")) ? null : reader.GetString("observacion_cliente"),
+                        MetodoPagoId = reader.GetInt32("metodoPagoId"),
+                        OrdenEstadoId = reader.GetInt32("ordenEstadoId"),
+                        UsuarioId = reader.GetInt32("usuarioId")
+                    };
+                    ordenes.Add(orden);
+                }
+                return ordenes;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                cmd.Connection.Close();
+            }
+        }
 
 
     }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Restaurante.Models;
 using Restaurante.Datos;
+using Heiwa.Models;
 
 namespace Restaurante.Controllers
 {
@@ -32,7 +33,7 @@ namespace Restaurante.Controllers
         [HttpPost]
         public IActionResult SaveOrden(OrdenRequest ordenRequest)
         {
-            string[] datos = { ordenRequest.Fecha.ToString(), ordenRequest.ObservacionCliente, ordenRequest.MetodoPagoId.ToString(),  ordenRequest.UsuarioId.ToString(), ordenRequest.OrdenEstadoId.ToString()};
+            string[] datos = { ordenRequest.Fecha.ToString(), ordenRequest.MetodoPagoId.ToString(),  ordenRequest.UsuarioId.ToString(), ordenRequest.OrdenEstadoId.ToString()};
             // Verificación de datos
             if (datos.Any(string.IsNullOrEmpty))
             {

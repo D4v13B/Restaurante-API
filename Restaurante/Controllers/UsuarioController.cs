@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 namespace Restaurante.Controllers
 {
     [ApiController]
-    [Authorize]
     [Route("api/[controller]")]
     public class UsuarioController : ControllerBase
     {
@@ -22,7 +21,7 @@ namespace Restaurante.Controllers
         {
             string[] datos = { usuario.Nombre, usuario.Email, usuario.UsuarioTipoId.ToString() };
             //Vamos a verificar primero
-            if (datos.Any(string.IsNullOrEmpty)) 
+            if (datos.Any(string.IsNullOrEmpty))
             {
                 return BadRequest(new
                 {
@@ -35,7 +34,7 @@ namespace Restaurante.Controllers
             int verifySave = new Db().SaveUser(usuario);
             if (verifySave > 0)
             {
-                return Ok (new
+                return Ok(new
                 {
                     titulo = "Guardado correctamente",
                     msg = "El usuario se ha guardado exitosamente",
@@ -51,6 +50,45 @@ namespace Restaurante.Controllers
             });
         }
 
+        [HttpPut("{id}")]
+        public IActionResult UpdateUsuario(int id, [FromBody] UsuarioRequest usuarioRequest)
+        {
+            int result = new Db().ActualizarUsuario(id, usuarioRequest);
+
+            if (result > 0)
+            {
+                return Ok("Usuario actualizado exitosamente");
+            }
+            else
+            {
+                return NotFound("Usuario no encontrado");
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public IActionResult EliminarUsuario(int id)
+        {
+            try
+            {
+                // Llamamos al método EliminarUsuario de la clase Db
+                int result = new Db().EliminarUsuario(id);
+                
+                // Si result es mayor que 0, significa que el usuario fue eliminado exitosamente
+                if(result > 0)
+                {r
+                    return Ok(new { message = "Usuario eliminado exitosamente" });
+                }
+                else
+                {
+                    return NotFound(new { message = "Usuario no encontrado" });
+                }
+            }
+            catch (Exception ex)
+            {
+                // Si ocurre un error, devolvemos un mensaje de error
+                return StatusCode(500, new { message = "Ocurrió un error al eliminar el usuario", error = ex.Message });
+            }
+        }
 
     }
 }

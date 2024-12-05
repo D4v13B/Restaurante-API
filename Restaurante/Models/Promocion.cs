@@ -7,7 +7,9 @@
         public DateTime FechaValidezInicio { get; set; }
         public DateTime FechaValidezFinal { get; set; }
         public decimal Precio { get; set; }
-        public string Foto { get; set; }
+        public string? Foto { get; set; }
+
+        public List<PromocionDetalle> Detalles { get; set; }
     }
 
 }
